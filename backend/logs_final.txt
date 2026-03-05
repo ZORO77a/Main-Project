@@ -1,0 +1,39 @@
+=== Recent Access Logs (Last 5) ===
+Log #1
+  Time: 2026-01-22 12:20:35.111000
+  User: 69402e8015cd5c34e6f1bf75
+  Action: file_access
+  Success: False
+  Reason: Outside allowed location (409136m > 500m)
+  Location: {'lat': 9.4127425, 'lng': 76.64202374999999}
+------------------------------
+Log #2
+  Time: 2026-01-22 12:15:06.277000
+  User: 69402e8015cd5c34e6f1bf75
+  Action: file_access
+  Success: False
+  Reason: Outside allowed location (7552489m > 500m)
+  Location: {'lat': 9.4127425, 'lng': 76.64202374999999}
+------------------------------
+Log #3
+  Time: 2026-01-22 12:14:09.875000
+  User: 69402e8015cd5c34e6f1bf75
+  Action: file_access
+  Success: False
+  Reason: Outside allowed location (7552489m > 500m)
+  Location: {'lat': 9.4127425, 'lng': 76.64202374999999}
+------------------------------
+Log #4
+  Time: 2026-01-21 13:04:59.527000
+  User: 69402e8015cd5c34e6f1bf75
+  Action: file_access
+  Success: False
+  Reason: Device not registered or not trusted
+------------------------------
+Log #5
+  Time: 2026-01-21 13:02:08.558000
+  User: 69402e8015cd5c34e6f1bf75
+  Action: file_access
+  Success: False
+  Reason: Device not registered or not trusted
+------------------------------

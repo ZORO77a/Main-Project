@@ -1,0 +1,76 @@
+=== All Users in Database ===
+
+ID: 693f97049b3227ed0c651728
+Email: aswinanaik2103@gmail.com
+Role: admin
+Name: System Admin
+Allocated WiFi SSID: 'None'
+Allocated Location: None
+Allocated Time Start: None
+Allocated Time End: None
+--------------------------------------------------
+ID: 693f971823bccb0bbe034d71
+Email: ananthakrishnan272004@gmail.com
+Role: employee
+Name: Ananthakrishnan
+Allocated WiFi SSID: 'Office_WiFi'
+Allocated Location: {'lat': 12.9716, 'lng': 77.5946}
+Allocated Time Start: 09:00
+Allocated Time End: 18:00
+--------------------------------------------------
+ID: 69402e8015cd5c34e6f1bf75
+Email: aswinanaik18@gmail.com
+Role: employee
+Name: aswinanaik
+Allocated WiFi SSID: 'Realme C15'
+Allocated Location: {'lat': 9.413061844193209, 'lng': 7.664195087681044}
+Allocated Time Start: 09:00
+Allocated Time End: 04:00
+--------------------------------------------------
+ID: 695208a984ff0ffb570e165e
+Email: shebinmjohn85@gmail.com
+Role: employee
+Name: shebin
+Allocated WiFi SSID: 'Realme C15'
+Allocated Location: {'lat': 9.41324611870321, 'lng': 7.664140016659333}
+Allocated Time Start: 09:00
+Allocated Time End: 05:00
+--------------------------------------------------
+ID: 69577d149fdf2f0624cecd8c
+Email: arjunbpanicker2004@gmail.com
+Role: employee
+Name: Arjun B Panicker
+Allocated WiFi SSID: 'moto'
+Allocated Location: {'lat': 9.41324611870321, 'lng': 7.664140016659333}
+Allocated Time Start: 08:00
+Allocated Time End: 05:00
+--------------------------------------------------
+ID: 695b4b8edcbf72bc4bf0fff1
+Email: nikhilthomas4321@gmail.com
+Role: employee
+Name: Nikhil Thomas
+Allocated WiFi SSID: 'moto'
+Allocated Location: {'lat': 9.41324611870321, 'lng': 7.664140016659333}
+Allocated Time Start: 09:00
+Allocated Time End: 05:00
+--------------------------------------------------
+ID: 695b6d9129b15df718a57d44
+Email: anakhamr07@gmail.com
+Role: employee
+Name: Anakha M R
+Allocated WiFi SSID: 'moto'
+Allocated Location: {'lat': 9.41324611870321, 'lng': 7.664140016659333}
+Allocated Time Start: 09:00
+Allocated Time End: 05:00
+--------------------------------------------------
+ID: 695e0d8eaf7cba5fe10958c9
+Email: anakhamr08@gmail.com
+Role: employee
+Name: Anakha M A
+Allocated WiFi SSID: 'moto'
+Allocated Location: {'lat': 9.41324611870321, 'lng': 7.664140016659333}
+Allocated Time Start: 10:00
+Allocated Time End: 06:00
+--------------------------------------------------
+
+Total users found: 8

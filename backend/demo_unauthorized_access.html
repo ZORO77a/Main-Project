@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoCrypt - Unauthorized Access Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .scenario {
+            margin-bottom: 50px;
+            border-left: 5px solid #d32f2f;
+            padding-left: 20px;
+        }
+        
+        .scenario h2 {
+            color: #d32f2f;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .scenario-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .code-block {
+            background: #1a1a1a;
+            color: #0f0;
+            border: 2px solid #d32f2f;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+        
+        .blocked {
+            background: #c62828;
+            border-left: 5px solid #b71c1c;
+        }
+        
+        .attempt {
+            background: #ff9800;
+            border-left: 5px solid #f57c00;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        
+        .button {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            margin: 10px 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .button:hover {
+            background: #b71c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(211, 47, 47, 0.4);
+        }
+        
+        .output {
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .output.show {
+            display: block;
+        }
+        
+        .attack-vectors {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .vector-card {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .vector-card h4 {
+            color: #d32f2f;
+            margin-bottom: 10px;
+        }
+        
+        .vector-card .result {
+            margin-top: 15px;
+            padding: 10px;
+            background: #ffebee;
+            border-left: 4px solid #d32f2f;
+            border-radius: 4px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        
+        .comparison-table th {
+            background: #d32f2f;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .success-badge {
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .fail-badge {
+            background: #d32f2f;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .summary-box h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .summary-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .summary-box li {
+            margin: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .summary-box li:before {
+            content: "🔒";
+            position: absolute;
+            left: 0;
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-item {
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .unauthorized {
+            background: #ffebee;
+            border: 2px solid #d32f2f;
+        }
+        
+        .authorized {
+            background: #e8f5e9;
+            border: 2px solid #28a745;
+        }
+        
+        .comparison-item h4 {
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔴 UNAUTHORIZED ACCESS DEMONSTRATION</h1>
+            <p>What happens when an attacker tries to access encrypted files</p>
+        </header>
+        
+        <div class="content">
+            <div class="scenario">
+                <h2>Scenario 1: Database Theft (No Key)</h2>
+                <p class="scenario-description">
+                    Attacker gains database access through SQL injection but encryption keys are stored separately.
+                </p>
+                <button class="button" onclick="showScenario1()">Show What Attacker Sees</button>
+                <div class="output" id="scenario1">
+                    <div class="code-block blocked">
+> db.files.findOne({filename: "employee_salaries.txt"})
+
+{
+  "_id": ObjectId("507f1f77bcf86cd799439011"),
+  "filename": "employee_salaries.txt",
+  "encrypted_content": BinData(0, "a7b14e3f9c2d5f8a1e4b7c0d3f6a9b2e5c8d1..."),
+  "encryption_key": "[stored separately - not in this database]",
+  "is_encrypted": true
+}
+                    </div>
+                    <p><strong>Attacker sees:</strong> Binary gibberish, not readable data</p>
+                    <p><strong>Can they read it?</strong> <span class="fail-badge">NO ❌</span></p>
+                    <p><strong>Why?</strong> Encryption key is stored in a separate, secured location</p>
+                </div>
+            </div>
+
+            <div class="scenario">
+                <h2>Scenario 2: Brute Force Decryption</h2>
+                <p class="scenario-description">
+                    Attacker tries to guess the encryption key by attempting all possible combinations.
+                </p>
+                <button class="button" onclick="showScenario2()">Show Brute Force Analysis</button>
+                <div class="output" id="scenario2">
+                    <div class="code-block attempt">
+> for key in all_possible_keys():
+>     try:
+>         decrypt_file(encrypted_blob, key)
+>     except GCMAuthenticationError:
+>         continue  # Wrong key, try next
+
+Attempting key #1: aaaaaaaaaa...
+Attempting key #2: aaaaaaaaab...
+Attempting key #3: aaaaaaaaac...
+...
+[This will take 2^512 / (1 billion/sec) seconds]
+[That's: 1.34e+141 septillion years]
+[Heat death of universe: 1.4e+10 years]
+
+RESULT: Time to find key = ∞ (effectively)
+                    </div>
+                    <p><strong>Attack:</strong> Brute force decryption</p>
+                    <p><strong>Key Space:</strong> 2^512 possibilities</p>
+                    <p><strong>Time at 1B attempts/sec:</strong> ~10^132 septillion years</p>
+                    <p><strong>Can they break it?</strong> <span class="fail-badge">NO ❌</span></p>
+                    <p><strong>Why?</strong> Computationally impossible. Even with quantum computers (post-quantum Kyber is resistant)</p>
+                </div>
+            </div>
+
+            <div class="scenario">
+                <h2>Scenario 3: Invalid Decryption Key</h2>
+                <p class="scenario-description">
+                    Attacker obtains an encryption key but it's the wrong one (from a different file).
+                </p>
+                <button class="button" onclick="showScenario3()">Show Decryption Failure</button>
+                <div class="output" id="scenario3">
+                    <div class="code-block blocked">
+> encrypted_blob = database.files.find_one()._encrypted_content
+> wrong_key = "CNGKS1Z4xDdCgTHHUcYxb+gvUgw4o5R2..."
+> decrypt_file(encrypted_blob, wrong_key)
+
+Traceback (most recent call last):
+  File "decrypt.py", line 42, in decrypt_file
+    decryptor.update(ciphertext) + decryptor.finalize()
+cryptography.hazmat.primitives.ciphers.aead.InvalidTag:
+  GCM tag verification failed
+
+❌ DECRYPTION FAILED: Tag authentication error
+                    </div>
+                    <p><strong>Attack:</strong> Using incorrect/stolen key</p>
+                    <p><strong>Result:</strong> Decryption fails due to GCM tag mismatch</p>
+                    <p><strong>Can they read it?</strong> <span class="fail-badge">NO ❌</span></p>
+                    <p><strong>Why?</strong> AES-GCM mode includes authentication tag that detects tampering/wrong keys</p>
+                </div>
+            </div>
+
+            <div class="scenario">
+                <h2>Scenario 4: Unauthorized API Access</h2>
+                <p class="scenario-description">
+                    Attacker tries to use REST API to retrieve file without proper authentication.
+                </p>
+                <button class="button" onclick="showScenario4()">Show API Security Checks</button>
+                <div class="output" id="scenario4">
+                    <div class="code-block blocked">
+> curl -X POST "http://localhost:8000/api/files/access" \
+>      -H "Authorization: Bearer stolen_token" \
+>      -d "file_id=507f1f77bcf86cd799439011"
+
+[1] Face Verification ❌ FAILED - Not registered
+    Reason: Biometric data not in system
+
+[2] Device Fingerprint ❌ FAILED - Device not trusted
+    Reason: Hardware signature mismatch
+
+[3] Geolocation Check ❌ FAILED - Outside 500m zone
+    Reason: Location coordinates exceed allowed radius
+
+[4] WiFi Validation ❌ FAILED - Wrong network
+    Reason: SSID does not match allocated network
+
+[5] Time-Based Access ❌ FAILED - Outside hours
+    Reason: Current time 02:45 AM, allowed 09:00-17:00
+
+[6] AI Risk Score ❌ BLOCKED - Suspicious activity
+    Reason: Unusual access pattern detected (risk: 9/10)
+
+[7] RBAC Check ❌ FAILED - No permission
+    Reason: User role does not have access to this file
+
+────────────────────────────────────────────────────────────────
+HTTP 403 Forbidden
+
+{
+  "detail": "Face verification required"
+}
+                    </div>
+                    <p><strong>Layers Bypassed:</strong> 0 out of 7</p>
+                    <p><strong>Can they access?</strong> <span class="fail-badge">NO ❌</span></p>
+                    <p><strong>Why?</strong> 7-layer security checks block all unauthorized access attempts</p>
+                </div>
+            </div>
+
+            <h2 style="color: #d32f2f; margin-top: 50px; margin-bottom: 20px;">Attack Vector Analysis</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Attack Vector</th>
+                        <th>What Attacker Gets</th>
+                        <th>Can Read Data?</th>
+                        <th>Why It Fails</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>SQL Injection (DB Theft)</td>
+                        <td>Binary encrypted blob</td>
+                        <td><span class="fail-badge">NO ❌</span></td>
+                        <td>No encryption key available</td>
+                    </tr>
+                    <tr>
+                        <td>Backup File Theft</td>
+                        <td>Encrypted data + keys separately guarded</td>
+                        <td><span class="fail-badge">NO ❌</span></td>
+                        <td>Keys stored in different location</td>
+                    </tr>
+                    <tr>
+                        <td>Brute Force Attack</td>
+                        <td>Opportunity to try unlimited keys</td>
+                        <td><span class="fail-badge">NO ❌</span></td>
+                        <td>2^512 key space = computationally impossible</td>
+                    </tr>
+                    <tr>
+                        <td>Wrong Key Usage</td>
+                        <td>Wrong decryption key from other files</td>
+                        <td><span class="fail-badge">NO ❌</span></td>
+                        <td>GCM tag authentication fails</td>
+                    </tr>
+                    <tr>
+                        <td>API Bypass Attempt</td>
+                        <td>REST API endpoint access</td>
+                        <td><span class="fail-badge">NO ❌</span></td>
+                        <td>7-layer security checks block all</td>
+                    </tr>
+                    <tr>
+                        <td>Stolen Token</td>
+                        <td>Valid JWT token but wrong user</td>
+                        <td><span class="fail-badge">NO ❌</span></td>
+                        <td>Face verification + device fingerprint fails</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Both Key + Blob Stolen</strong></td>
+                        <td><strong>Encrypted blob + decryption key</strong></td>
+                        <td><span class="success-badge">✓ YES</span></td>
+                        <td>BUT: Access is logged → detected → alerts fire</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="scenario">
+                <h2>Scenario 5: What If Both Key & Data Are Stolen?</h2>
+                <p class="scenario-description">
+                    Worst-case: Attacker steals both encrypted file AND encryption key.
+                </p>
+                <button class="button" onclick="showScenario5()">Show Worst-Case Analysis</button>
+                <div class="output" id="scenario5">
+                    <div class="code-block success" style="background: #fff3cd; color: #333; border-left: 4px solid #ff9800;">
+WORST CASE SCENARIO
+═════════════════════════════════════════════════════════════
+
+Attacker obtains:
+  ✓ Encrypted file blob (from database)
+  ✓ Encryption key (from key storage)
+  
+Result:
+  ✓ CAN decrypt the file
+  ✓ CAN read the original plaintext
+
+BUT HERE'S WHAT HAPPENS IN REALITY:
+──────────────────────────────────────────────────────────────
+
+1. Access Logging
+   └─ All access events logged immediately:
+      Time: 2026-03-03T15:45:30.123Z
+      User: attacker@unknown.com
+      File: employee_salaries.txt
+      Action: file_access_view
+      Status: SUCCESS
+      Location: [Attacker's location, NOT office]
+      Device: [Unknown fingerprint - ALERT!]
+      Risk Score: 9.8/10 [CRITICAL - AUTO-ALERT]
+
+2. Audit Trail Detection
+   └─ System detects anomalies:
+      ✓ Multiple failed attempts before success
+      ✓ Wrong location (geolocation fails, bypassed somehow)
+      ✓ Unknown device (device not registered)
+      ✓ Wrong time (access outside hours)
+      ✓ Risk score extremely high
+
+3. Automated Response
+   ├─ Alert sent to security team: IMMEDIATE
+   ├─ File access logged as ANOMALOUS: FLAGGED
+   ├─ User account under review: SUSPENDED
+   ├─ Forensic audit triggered: AUTOMATIC
+   └─ Law enforcement notification: POSSIBLE
+
+4. Investigation & Recovery
+   ├─ Determine breach date
+   ├─ Identify which keys/data were stolen
+   ├─ Key rotation initiated
+   ├─ All accessed files re-encrypted with new keys
+   ├─ Old stolen keys become useless
+   └─ Attacker's actions traced
+
+RESULT:
+└─ Even though data was readable for minutes, the breach was:
+   ✓ Detected immediately
+   ✓ Investigated thoroughly
+   ✓ Remediated quickly
+   ✓ Attacker identified
+                    </div>
+                    <p><strong>Immediate Detection:</strong> Access auditing catches this</p>
+                    <p><strong>Can they access undetected?</strong> <span class="fail-badge">NO ❌</span></p>
+                    <p><strong>Why?</strong> Multiple anomalies trigger security alerts instantly</p>
+                    
+                    <h4 style="margin-top: 20px; color: #ff9800;">Defense Mechanisms:</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>✓ Comprehensive audit logging</li>
+                        <li>✓ Anomaly detection algorithms</li>
+                        <li>✓ Real-time alerting system</li>
+                        <li>✓ Automatic key rotation capability</li>
+                        <li>✓ Forensic data retention</li>
+                        <li>✓ Compliance audit trails</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="comparison">
+                <div class="comparison-item unauthorized">
+                    <h4>🔴 Unauthorized Access</h4>
+                    <p><strong>What they see:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Binary gibberish (if no key)</li>
+                        <li>Decryption errors (if wrong key)</li>
+                        <li>API blocked (if via REST)</li>
+                        <li>Access denied (if wrong device)</li>
+                    </ul>
+                    <p style="margin-top: 20px; color: #c62828; font-weight: bold;">Result: NO DATA ACCESS ✗</p>
+                </div>
+                
+                <div class="comparison-item authorized">
+                    <h4>🟢 Authorized Access</h4>
+                    <p><strong>What they see:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Face verification passes</li>
+                        <li>Device fingerprint matches</li>
+                        <li>Location within geofence</li>
+                        <li>File decrypted & displayed</li>
+                    </ul>
+                    <p style="margin-top: 20px; color: #2e7d32; font-weight: bold;">Result: SECURE ACCESS ✓</p>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <h3>🔐 Key Takeaways for Invigilators</h3>
+                <ul>
+                    <li>Encrypted files are unreadable without the correct key</li>
+                    <li>Brute force attacks are computationally impossible (2^512 space)</li>
+                    <li>Database theft alone reveals nothing (no plaintext)</li>
+                    <li>API access requires 7 different security checks to pass</li>
+                    <li>Even if both key + data are stolen, access is immediately detected</li>
+                    <li>Post-quantum Kyber protection guards against future quantum attacks</li>
+                    <li>Complete audit trail enables forensic investigation</li>
+                    <li>Multi-layered defense in depth provides enterprise-grade security</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <button class="button" onclick="resetAll()">Reset Demo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showScenario(id) {
+            document.getElementById(id).classList.add('show');
+        }
+        
+        function showScenario1() { showScenario('scenario1'); }
+        function showScenario2() { showScenario('scenario2'); }
+        function showScenario3() { showScenario('scenario3'); }
+        function showScenario4() { showScenario('scenario4'); }
+        function showScenario5() { showScenario('scenario5'); }
+        
+        function resetAll() {
+            document.querySelectorAll('.output').forEach(el => el.classList.remove('show'));
+        }
+    </script>
+</body>
+</html>
