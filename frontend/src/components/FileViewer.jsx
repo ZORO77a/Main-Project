@@ -28,10 +28,12 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
   const [accessGranted, setAccessGranted] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedContent, setEditedContent] = useState('');
+  const [textContent, setTextContent] = useState(''); // Raw text for text files
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
   const intervalRef = useRef(null);
   const objectUrlRef = useRef(null);
+  const blobRef = useRef(null); // Store blob ref for text file access
 
   useEffect(() => {
     requestFileAccess();
@@ -145,10 +147,27 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
 
       const blob = response.data;
       const responseMime = response.headers['content-type'] || 'application/octet-stream';
+      
+      const detectedType = getFileTypeFromMime(responseMime, fileName);
+
+      // Store blob ref for text file access
+      blobRef.current = blob;
+
+      // For text files and binary files, create blob URL
       const objectUrl = URL.createObjectURL(blob);
       objectUrlRef.current = objectUrl;
 
-      const detectedType = getFileTypeFromMime(responseMime, fileName);
+      // For text files, extract text content
+      if (detectedType === 'text') {
+        try {
+          const text = await blob.text();
+          setTextContent(text);
+          setEditedContent(text);
+        } catch (textError) {
+          console.warn('Could not extract text from blob:', textError);
+          setTextContent('[Error reading file content]');
+        }
+      }
 
       setFileContent(objectUrl);
       setFileType(detectedType);
@@ -157,16 +176,6 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
       setLoading(false);
 
       toast.success('File access granted ✓');
-
-      // For text files: also load raw text for editing
-      if (detectedType === 'text') {
-        try {
-          const textResponse = await employeeAPI.openTextFile(fileId);
-          setEditedContent(textResponse.data.content || '');
-        } catch (textError) {
-          console.warn('Could not fetch text for editing:', textError);
-        }
-      }
 
     } catch (err) {
       console.error('File access error:', err);
@@ -284,7 +293,7 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
                 />
               ) : (
                 <TextFileViewer
-                  url={fileContent}
+                  content={textContent}
                   isJson={mimeType === 'application/json'}
                 />
               )}
@@ -419,46 +428,33 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TextFileViewer — fetches blob URL and renders as pre-formatted text
+// TextFileViewer — renders pre-formatted text directly from content
 // ─────────────────────────────────────────────────────────────────────────────
-const TextFileViewer = ({ url, isJson = false }) => {
-  const [content, setContent] = useState('');
-  const [loading, setLoading] = useState(true);
+const TextFileViewer = ({ content = '', isJson = false }) => {
+  const [displayContent, setDisplayContent] = useState('');
 
   useEffect(() => {
-    if (!url) return;
-    fetch(url)
-      .then((res) => res.blob())
-      .then((blob) => blob.text())
-      .then((text) => {
-        if (isJson) {
-          try {
-            setContent(JSON.stringify(JSON.parse(text), null, 2));
-          } catch {
-            setContent(text);
-          }
-        } else {
-          setContent(text);
-        }
-      })
-      .catch((err) => {
-        console.error('Error loading text file:', err);
-        setContent('[Error loading file content]');
-      })
-      .finally(() => setLoading(false));
-  }, [url, isJson]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-      </div>
-    );
-  }
+    if (!content) {
+      setDisplayContent('[No content]');
+      return;
+    }
+    
+    // Format JSON if needed
+    if (isJson) {
+      try {
+        setDisplayContent(JSON.stringify(JSON.parse(content), null, 2));
+      } catch (err) {
+        console.warn('Failed to parse JSON, showing raw content:', err);
+        setDisplayContent(content);
+      }
+    } else {
+      setDisplayContent(content);
+    }
+  }, [content, isJson]);
 
   return (
     <pre className="p-4 text-sm font-mono whitespace-pre-wrap break-words overflow-auto h-full bg-gray-50 text-gray-800">
-      {content}
+      {displayContent}
     </pre>
   );
 };

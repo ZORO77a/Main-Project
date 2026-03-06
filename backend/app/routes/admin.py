@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi.responses import StreamingResponse
 from bson import ObjectId, errors
 from datetime import datetime, timedelta
 from typing import List
+import io
+import mimetypes
 
 from app.database import (
     users_collection,
@@ -10,10 +13,46 @@ from app.database import (
     work_from_home_requests_collection,
 )
 from app.models import User, AddEmployeeRequest
-from app.utils import hash_password
+from app.utils import hash_password, encrypt_file, decrypt_file
 from app.routes.auth import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+# ---------------------------
+# HELPER: GET MIME TYPE
+# ---------------------------
+
+def get_mime_type(filename: str) -> str:
+    """Get MIME type based on file extension"""
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type:
+        return mime_type
+
+    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    mime_map = {
+        'pdf': 'application/pdf',
+        'txt': 'text/plain',
+        'json': 'application/json',
+        'log': 'text/plain',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'bmp': 'image/bmp',
+        'svg': 'image/svg+xml',
+        'py': 'text/plain',
+        'js': 'text/plain',
+        'ts': 'text/plain',
+        'html': 'text/html',
+        'css': 'text/css',
+        'md': 'text/markdown',
+        'csv': 'text/csv',
+        'xml': 'text/xml',
+        'yaml': 'text/yaml',
+        'yml': 'text/yaml',
+    }
+    return mime_map.get(ext, 'application/octet-stream')
 
 
 # ---------------------------
@@ -265,6 +304,123 @@ async def get_single_file(
         "owner_name": owner.get("name") if owner else "Unknown",
         "owner_email": owner.get("email") if owner else "Unknown",
     }
+
+# ---------------------------
+# ADMIN VIEW FILE CONTENT
+# ---------------------------
+
+@router.get("/files/{file_id}/content")
+async def view_file_content(
+    file_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Admin endpoint to view/download file content.
+    Returns decrypted file as blob with proper MIME type.
+    """
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    try:
+        file_doc = await files_collection.find_one(
+            {"_id": ObjectId(file_id)}
+        )
+    except errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid file ID")
+
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Decrypt file
+    if not file_doc.get("encrypted_content") or not file_doc.get("encryption_key"):
+        raise HTTPException(status_code=500, detail="File data missing")
+
+    alg = file_doc.get("encryption_alg", "x25519")
+    try:
+        decrypted = decrypt_file(
+            file_doc["encrypted_content"],
+            file_doc["encryption_key"],
+            alg,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="File decryption failed")
+
+    # Log access
+    await access_logs_collection.insert_one({
+        "user_id": str(current_user["_id"]),
+        "file_id": file_id,
+        "action": "file_view_admin",
+        "timestamp": datetime.utcnow(),
+        "success": True,
+    })
+
+    # Return file with proper MIME type
+    mime_type = get_mime_type(file_doc["filename"])
+    
+    return StreamingResponse(
+        io.BytesIO(decrypted),
+        media_type=mime_type,
+        headers={"Content-Disposition": f"inline; filename={file_doc['filename']}"},
+    )
+
+# ---------------------------
+# ADMIN UPLOAD FILE
+# ---------------------------
+
+@router.post("/upload-file")
+async def admin_upload_file(
+    file: UploadFile = File(...),
+    employee_id: str = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Admin can upload files for the system or assign to employees.
+    If employee_id is provided, file is assigned to that employee.
+    Otherwise, it's uploaded to admin's account.
+    """
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # If employee_id is provided, verify it exists
+    owner_id = str(current_user["_id"])
+    if employee_id:
+        try:
+            employee = await users_collection.find_one(
+                {"_id": ObjectId(employee_id), "role": "employee"}
+            )
+            if not employee:
+                raise HTTPException(status_code=404, detail="Employee not found")
+            owner_id = str(employee["_id"])
+        except errors.InvalidId:
+            raise HTTPException(status_code=400, detail="Invalid employee ID")
+
+    # Read and encrypt file
+    content = await file.read()
+    encrypted, key, alg = encrypt_file(content)
+
+    doc = {
+        "filename": file.filename,
+        "encrypted_content": encrypted,
+        "encryption_key": key,
+        "encryption_alg": alg,
+        "owner_id": owner_id,
+        "created_at": datetime.utcnow(),
+        "is_encrypted": True,
+        "uploaded_by_admin": str(current_user["_id"]),
+    }
+
+    result = await files_collection.insert_one(doc)
+
+    await access_logs_collection.insert_one({
+        "user_id": str(current_user["_id"]),
+        "file_id": str(result.inserted_id),
+        "action": "file_upload_admin",
+        "timestamp": datetime.utcnow(),
+        "success": True,
+        "target_user_id": owner_id,
+    })
+
+    return {"message": "File uploaded", "file_id": str(result.inserted_id)}
 
 # ---------------------------
 # CLEANUP OLD FILES

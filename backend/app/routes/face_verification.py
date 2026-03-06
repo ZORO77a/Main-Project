@@ -85,7 +85,7 @@ async def verify_face(payload: FaceVerificationRequest):
     Verify face after OTP (mandatory step)
     Returns session token if successful
     
-    DEVELOPMENT MODE: Admins can bypass face verification if face not registered
+    DEVELOPMENT MODE: Face verification is completely bypassed
     """
     print(f"[DEBUG] Face verification request for email: {payload.email}")
     user = await users_collection.find_one({"email": payload.email})
@@ -95,6 +95,53 @@ async def verify_face(payload: FaceVerificationRequest):
     
     print(f"[DEBUG] Found user: {user['email']}, role: {user['role']}, id: {user['_id']}")
 
+    # BYPASS MODE: Skip all face verification checks
+    session_expires = datetime.utcnow() + timedelta(hours=24)
+    await sessions_collection.update_one(
+        {"user_id": str(user["_id"])},
+        {
+            "$set": {
+                "user_id": str(user["_id"]),
+                "session_token": f"session_{ObjectId()}",
+                "face_verified": True,
+                "face_bypassed": True,
+                "face_bypassed_at": datetime.utcnow(),
+                "expires_at": session_expires,
+                "created_at": datetime.utcnow(),
+            }
+        },
+        upsert=True,
+    )
+
+    await access_logs_collection.insert_one({
+        "user_id": str(user["_id"]),
+        "action": "face_verification",
+        "timestamp": datetime.utcnow(),
+        "success": True,
+        "reason": "Face verification bypassed (DEV MODE)",
+    })
+
+    from app.utils import create_jwt_token
+    token = create_jwt_token({
+        "user_id": str(user["_id"]),
+        "face_verified": True,
+        "face_bypassed": True,
+    })
+
+    return {
+        "token": token,
+        "similarity": 1.0,
+        "message": "Face verification bypassed. Login successful.",
+        "requires_face_registration": False,
+        "user": {
+            "id": str(user["_id"]),
+            "email": user["email"],
+            "name": user.get("name", ""),
+            "role": user["role"],
+        },
+    }
+
+    # OLD FACE VERIFICATION CODE (BELOW IS UNREACHABLE)
     # Get stored face embedding
     stored_face = await face_embeddings_collection.find_one({
         "user_id": str(user["_id"])

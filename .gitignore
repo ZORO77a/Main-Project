@@ -14,3 +14,9 @@ backend/venv/
 
 # logs
 *.log
+
+# MongoDB installers
+*.msi
+mongodb-*.zip
+mongodb-*/
+mongosh-*/

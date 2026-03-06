@@ -12,6 +12,7 @@ export default function OtpVerify() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   useEffect(() => {
     const pendingEmail = localStorage.getItem('pendingEmail');
@@ -46,15 +47,22 @@ export default function OtpVerify() {
       console.log('OTP verification response:', response.data);
       toast.success('OTP verified successfully!');
 
-      // OTP verification now returns temp_token and requires face verification
-      const { temp_token, user, requires_face_verification } = response.data;
+      // Backend now returns a full token with all verifications bypassed
+      const { token, user } = response.data;
 
-      // Store temp token and user data for face verification
-      localStorage.setItem('tempToken', temp_token);
-      localStorage.setItem('pendingUser', JSON.stringify(user));
+      // Update auth context and store in localStorage
+      login(user, token);
 
-      // Face verification is always required (admins can bypass)
-      navigate('/face-verify');
+      // Clear any pending email/password from session
+      localStorage.removeItem('pendingEmail');
+      sessionStorage.removeItem('tempPassword');
+
+      // Proceed directly to dashboard (no face verification needed)
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/employee');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'OTP verification failed');
     } finally {

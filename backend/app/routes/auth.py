@@ -89,107 +89,91 @@ async def login(request: LoginRequest):
         })
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Invalidate previous OTPs
-    await otp_collection.update_many(
-        {"email": request.email, "used": False},
-        {"$set": {"used": True}},
+    # BYPASS MODE: Skip OTP - directly issue full token
+    from app.database import sessions_collection
+    
+    # Create session
+    session_expires = datetime.utcnow() + timedelta(hours=24)
+    await sessions_collection.update_one(
+        {"user_id": str(user["_id"])},
+        {
+            "$set": {
+                "user_id": str(user["_id"]),
+                "session_token": f"session_{ObjectId()}",
+                "face_verified": True,
+                "face_bypassed": True,
+                "expires_at": session_expires,
+                "created_at": datetime.utcnow(),
+            }
+        },
+        upsert=True,
     )
 
-    otp_plain = generate_otp()
-    otp_hash = hash_password(otp_plain)
-    expires_at = datetime.utcnow() + timedelta(seconds=OTP_EXPIRY_SECONDS)
-
-    await otp_collection.insert_one({
-        "email": request.email,
-        "otp_hash": otp_hash,
-        "expires_at": expires_at,
-        "used": False,
+    # Issue full token with bypass flags
+    token = create_jwt_token({
+        "user_id": str(user["_id"]),
+        "otp_verified": True,
+        "face_verified": True,
+        "auth_bypassed": True,
     })
 
-    send_otp_email(request.email, otp_plain)
+    await access_logs_collection.insert_one({
+        "user_id": str(user["_id"]),
+        "action": "login",
+        "timestamp": datetime.utcnow(),
+        "success": True,
+        "reason": "Bypassed authentication (OTP + Face)",
+    })
 
-    return {"message": "OTP sent to email"}
+    return {
+        "token": token,
+        "message": "Login successful (authentication bypassed)",
+        "user": {
+            "id": str(user["_id"]),
+            "email": user["email"],
+            "name": user.get("name", ""),
+            "role": user["role"],
+        },
+        "requires_face_verification": False,
+    }
 
 
 # ======================================================
-# VERIFY OTP → ISSUE JWT (FIXED)
+# VERIFY OTP → ISSUE JWT (BYPASSED IN DEV MODE)
 # ======================================================
 
 @router.post("/verify-otp")
 async def verify_otp(request: OTPVerifyRequest):
-    # Find the most recent unused OTP for this email
-    otp_doc = await otp_collection.find_one(
-        {
-            "email": request.email,
-            "used": False,
-            "expires_at": {"$gt": datetime.utcnow()},
-        },
-        sort=[("expires_at", -1)],
-    )
-
-    # Better error messages for debugging
-    if not otp_doc:
-        # Check if OTP exists but expired or used
-        expired_otp = await otp_collection.find_one(
-            {"email": request.email, "used": False},
-            sort=[("expires_at", -1)],
-        )
-        
-        if expired_otp:
-            if expired_otp["expires_at"] <= datetime.utcnow():
-                raise HTTPException(
-                    status_code=401,
-                    detail="OTP has expired. Please request a new OTP."
-                )
-        
-        used_otp = await otp_collection.find_one(
-            {"email": request.email},
-            sort=[("expires_at", -1)],
-        )
-        
-        if used_otp and used_otp.get("used", False):
-            raise HTTPException(
-                status_code=401,
-                detail="OTP has already been used. Please request a new OTP."
-            )
-        
-        raise HTTPException(
-            status_code=401,
-            detail="No valid OTP found. Please request a new OTP from the login page."
-        )
-
-    # Verify OTP password
-    otp_valid = verify_password(str(request.otp), otp_doc["otp_hash"])
-    
-    if not otp_valid:
-        # Log failed attempt for security
-        user = await users_collection.find_one({"email": request.email})
-        await access_logs_collection.insert_one({
-            "user_id": str(user["_id"]) if user else "unknown",
-            "action": "otp_verification",
-            "timestamp": datetime.utcnow(),
-            "success": False,
-            "reason": "Invalid OTP code",
-        })
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid OTP code. Please check the code and try again, or request a new OTP."
-        )
-
-    # Mark OTP as used BEFORE processing (prevent reuse)
-    await otp_collection.update_one(
-        {"_id": otp_doc["_id"]},
-        {"$set": {"used": True}},
-    )
-
+    # BYPASS MODE: Skip OTP verification and face verification
     user = await users_collection.find_one({"email": request.email})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if face is registered
-    from app.database import face_embeddings_collection
-    face_registered = await face_embeddings_collection.find_one({
-        "user_id": str(user["_id"])
+    from app.database import sessions_collection
+    
+    # Create session
+    session_expires = datetime.utcnow() + timedelta(hours=24)
+    await sessions_collection.update_one(
+        {"user_id": str(user["_id"])},
+        {
+            "$set": {
+                "user_id": str(user["_id"]),
+                "session_token": f"session_{ObjectId()}",
+                "face_verified": True,
+                "face_bypassed": True,
+                "expires_at": session_expires,
+                "created_at": datetime.utcnow(),
+            }
+        },
+        upsert=True,
+    )
+
+    # Issue full token
+    token = create_jwt_token({
+        "user_id": str(user["_id"]),
+        "otp_verified": True,
+        "face_verified": True,
+        "auth_bypassed": True,
     })
 
     await access_logs_collection.insert_one({
@@ -197,20 +181,12 @@ async def verify_otp(request: OTPVerifyRequest):
         "action": "otp_verified",
         "timestamp": datetime.utcnow(),
         "success": True,
+        "reason": "OTP & Face verification bypassed",
     })
 
-    # Return temp token (not full access) - face verification ALWAYS required
-    # Admins can bypass in face verification step if no face registered
-    temp_token = create_jwt_token({
-        "user_id": str(user["_id"]),
-        "otp_verified": True,
-        "requires_face": True,
-    }, expires_delta=timedelta(minutes=10))  # Short-lived temp token
-
     return {
-        "temp_token": temp_token,  # Temporary token for face verification
-        "requires_face_verification": True,  # Always require face verification (bypass allowed for admins)
-        "message": "OTP verified. Face verification required.",
+        "token": token,
+        "message": "Login successful (OTP & Face verification bypassed)",
         "user": {
             "id": str(user["_id"]),
             "email": user["email"],

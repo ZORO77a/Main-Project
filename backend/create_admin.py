@@ -22,8 +22,8 @@ async def create_initial_admin():
         )
 
     admin_doc = {
-        "email": aswinanaik2103@gmail.com,
-        "password_hash": hash_password(aswin123),
+        "email": admin_email,
+        "password_hash": hash_password(admin_password),
         "role": "admin",
         "name": "System Admin",
         "phone": "9074433418",

@@ -129,8 +129,26 @@ export const adminAPI = {
   getFileDetails: (fileId) =>
     api.get(`/admin/files/${fileId}`),
 
+  viewFileContent: (fileId, config) =>
+    api.get(`/admin/files/${fileId}/content`, { 
+      ...config,
+      responseType: 'blob' 
+    }),
+
   deleteFile: (fileId) =>
     api.delete(`/admin/files/${fileId}`),
+
+  uploadFile: (file, employeeId = null) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (employeeId) {
+      formData.append('employee_id', employeeId);
+    }
+
+    return api.post('/admin/upload-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 
   getAccessLogs: () =>
     api.get('/admin/access-logs'),
