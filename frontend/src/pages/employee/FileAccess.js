@@ -10,7 +10,10 @@ import {
   X,
   Loader,
   AlertCircle,
-  Eye
+  Eye,
+  Download,
+  Lock,
+  Zap
 } from 'lucide-react';
 import { employeeAPI, authAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,8 +34,15 @@ export default function FileAccess() {
   const [deviceFingerprint, setDeviceFingerprint] = useState(null);
   const [locationStatus, setLocationStatus] = useState(null);
   const [wifiStatus, setWifiStatus] = useState(null);
-  const [manualWifiSSID, setManualWifiSSID] = useState(''); // Manual WiFi SSID input
-  const [viewerFile, setViewerFile] = useState(null); // { id, name } for file viewer
+  const [manualWifiSSID, setManualWifiSSID] = useState('');
+  const [viewerFile, setViewerFile] = useState(null);
+
+  // New state for full-screen file viewer
+  const [viewingFile, setViewingFile] = useState(null);
+  const [fileContent, setFileContent] = useState(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState(null);
+
   const { user } = useAuth();
 
   useEffect(() => {
@@ -239,6 +249,65 @@ export default function FileAccess() {
     } finally {
       setDeleteLoading(null);
     }
+  };
+
+  /* ================= VIEW FILE CONTENT ================= */
+  const viewFileContent = async (file) => {
+    if (!file) return;
+    setViewingFile(file);
+    setFileLoading(true);
+    setFileError(null);
+    setFileContent(null);
+
+    try {
+      const response = await employeeAPI.accessFileForViewing(
+        {
+          file_id: file.id,
+          current_location: { lat: 0, lng: 0 },
+          current_wifi_ssid: manualWifiSSID || '',
+          device_fingerprint: deviceFingerprint || '',
+        },
+        { responseType: 'blob' }
+      );
+
+      const blob = response.data;
+      const objectUrl = URL.createObjectURL(blob);
+
+      setFileContent({
+        url: objectUrl,
+        blob: blob,
+        type: getFileType(file.filename),
+        mimeType: response.headers['content-type'] || 'application/octet-stream',
+      });
+
+      toast.success('File access granted ✓', { duration: 2000 });
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || "Failed to load file content";
+      setFileError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setFileLoading(false);
+    }
+  };
+
+  const closeFileViewer = () => {
+    if (fileContent?.url) {
+      URL.revokeObjectURL(fileContent.url);
+    }
+    setViewingFile(null);
+    setFileContent(null);
+    setFileError(null);
+  };
+
+  const getFileType = (filename) => {
+    const ext = filename.toLowerCase().split('.').pop();
+    const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+    const textTypes = ['txt', 'json', 'log', 'md', 'csv', 'xml', 'yaml', 'yml', 'py', 'js', 'ts', 'html', 'css'];
+
+    if (ext === 'pdf') return 'pdf';
+    if (imageTypes.includes(ext)) return 'image';
+    if (textTypes.includes(ext)) return 'text';
+    return 'binary';
   };
 
   const startEditing = (file) => {
@@ -493,17 +562,17 @@ export default function FileAccess() {
                       )}
                     </button>
                     <button
-                      onClick={() => handleFileAccess(file.id)}
-                      disabled={accessLoading === file.id}
+                      onClick={() => viewFileContent(file)}
+                      disabled={fileLoading || accessLoading === file.id}
                       className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {accessLoading === file.id ? (
+                      {fileLoading ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       ) : (
                         <Eye className="w-4 h-4" />
                       )}
                       <span className="text-sm font-medium">
-                        {accessLoading === file.id ? 'Opening...' : 'View'}
+                        {fileLoading ? 'Opening...' : 'View'}
                       </span>
                     </button>
                   </div>
@@ -558,15 +627,169 @@ export default function FileAccess() {
       </div>
 
       {/* File Viewer Modal */}
-      {viewerFile && (
-        <FileViewer
-          fileId={viewerFile.id}
-          fileName={viewerFile.name}
-          algorithm={viewerFile.algorithm}
-          wifiSSID={manualWifiSSID}
-          onClose={() => setViewerFile(null)}
-        />
+      {viewingFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          {/* Loading state */}
+          {fileLoading && (
+            <div className="bg-white rounded-xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-100 border-t-blue-600" />
+                  <Lock className="absolute inset-0 m-auto w-5 h-5 text-blue-600" />
+                </div>
+                <p className="text-center text-gray-700 font-medium">Decrypting file…</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {fileError && !fileLoading && (
+            <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="p-4 bg-red-100 rounded-full">
+                  <X className="w-10 h-10 text-red-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Access Denied</h3>
+                <p className="text-center text-gray-600 text-sm">{fileError}</p>
+                <button
+                  onClick={closeFileViewer}
+                  className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* File viewer */}
+          {fileContent && !fileLoading && !fileError && (
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 flex flex-col z-10" style={{ height: '90vh' }}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <Eye className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">{viewingFile.filename}</h3>
+                    <div className="flex items-center space-x-2 mt-1 text-sm">
+                      <span className="text-gray-500">{new Date(viewingFile.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 flex-shrink-0">
+                  <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded text-xs font-semibold ${
+                    viewingFile.encryption_alg?.includes('kyber') 
+                      ? 'bg-purple-100 text-purple-700 border border-purple-300'
+                      : 'bg-blue-100 text-blue-700 border border-blue-300'
+                  }`}>
+                    {viewingFile.encryption_alg?.includes('kyber') ? (
+                      <>
+                        <Zap className="w-3 h-3" />
+                        <span>KYBER (PQC)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-3 h-3" />
+                        <span>{viewingFile.encryption_alg?.toUpperCase()}</span>
+                      </>
+                    )}
+                  </span>
+                  <button
+                    onClick={closeFileViewer}
+                    className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Close viewer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-h-0 overflow-hidden bg-gray-50">
+                {fileContent.type === 'pdf' && (
+                  <iframe
+                    src={fileContent.url}
+                    className="w-full h-full border-0"
+                    title={viewingFile.filename}
+                  />
+                )}
+
+                {fileContent.type === 'image' && (
+                  <div className="flex items-center justify-center h-full">
+                    <img
+                      src={fileContent.url}
+                      alt={viewingFile.filename}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+
+                {fileContent.type === 'text' && (
+                  <EmployeeFileTextViewer url={fileContent.url} isMime={fileContent.mimeType} />
+                )}
+
+                {fileContent.type === 'binary' && (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-3">
+                    <Download className="w-16 h-16 text-gray-300" />
+                    <p className="text-lg font-medium">Binary file — preview not available</p>
+                    <p className="text-sm text-gray-400">This file type cannot be previewed in the browser.</p>
+                    <a
+                      href={fileContent.url}
+                      download={viewingFile.filename}
+                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Download File
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
+  );
+}
+
+// Text file viewer component for employee
+function EmployeeFileTextViewer({ url, isMime }) {
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!url) return;
+    fetch(url)
+      .then((res) => res.blob())
+      .then((blob) => blob.text())
+      .then((text) => {
+        if (isMime === 'application/json') {
+          try {
+            setContent(JSON.stringify(JSON.parse(text), null, 2));
+          } catch {
+            setContent(text);
+          }
+        } else {
+          setContent(text);
+        }
+      })
+      .catch((err) => {
+        console.error('Error loading text file:', err);
+        setContent('[Error loading file content]');
+      })
+      .finally(() => setLoading(false));
+  }, [url, isMime]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <pre className="p-4 text-sm font-mono whitespace-pre-wrap break-words overflow-auto h-full bg-white text-gray-800">
+      {content}
+    </pre>
   );
 }
