@@ -5,7 +5,7 @@ import { Toaster } from "react-hot-toast";
 // Public pages
 import Login from "./pages/Login";
 import OtpVerify from "./pages/OtpVerify";
-import FaceVerification from "./pages/FaceVerification";
+// face verification page removed
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -44,7 +44,7 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route path="/" element={<Login />} />
       <Route path="/otp" element={<OtpVerify />} />
-      <Route path="/face-verify" element={<FaceVerification />} />
+      {/* face verification route removed */}
 
       {/* Admin Routes */}
       <Route

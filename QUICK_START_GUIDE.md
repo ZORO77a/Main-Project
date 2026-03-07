@@ -77,12 +77,13 @@ the legacy algorithm continue to decrypt normally.
 
 **Development (Default - Bypass Enabled):**
 ```env
-ALLOW_ADMIN_FACE_BYPASS=true
+# (face bypass variable is deprecated and ignored)
+#ALLOW_ADMIN_FACE_BYPASS=true
 ```
 
 **Production (Bypass Disabled):**
 ```env
-ALLOW_ADMIN_FACE_BYPASS=false
+#ALLOW_ADMIN_FACE_BYPASS=false
 ```
 
 ## 📝 Common Issues
@@ -96,7 +97,7 @@ ALLOW_ADMIN_FACE_BYPASS=false
 
 **For Admins:**
 - If bypass is enabled, this shouldn't happen
-- Check that `ALLOW_ADMIN_FACE_BYPASS=true` in environment
+- Face bypass is no longer used; you can ignore `ALLOW_ADMIN_FACE_BYPASS`.
 - Or register your face in admin panel
 
 ### "Face not registered" Error
@@ -109,7 +110,7 @@ ALLOW_ADMIN_FACE_BYPASS=false
 ### Admin Bypass Not Working
 
 **Check:**
-1. Environment variable: `ALLOW_ADMIN_FACE_BYPASS=true`
+1. (Deprecated) `ALLOW_ADMIN_FACE_BYPASS` is ignored
 2. User role is "admin"
 3. Face is NOT registered (bypass only works if face not registered)
 4. Check backend logs for bypass messages
@@ -150,7 +151,7 @@ python create_admin.py
 ## 🔐 Security Notes
 
 - **Development:** Admin bypass is enabled by default
-- **Production:** Set `ALLOW_ADMIN_FACE_BYPASS=false`
+- **Production:** face bypass settings are no longer applicable
 - Always register admin face before production
 - Register employee faces when creating accounts
 

@@ -4,31 +4,6 @@
 
 All requested frontend features have been successfully implemented:
 
-### 1. 📸 Face Capture Component
-
-**File:** `frontend/src/components/FaceCapture.jsx`
-
-**Features:**
-- Camera access using `getUserMedia` API
-- Real-time video preview with face frame overlay
-- Photo capture with canvas rendering
-- Base64 encoding for image transmission
-- Mirror preview (flipped horizontally)
-- Error handling for camera permissions
-- Retake functionality
-- Loading states and user feedback
-
-**Usage:**
-```jsx
-<FaceCapture
-  onCapture={(base64Image) => {
-    // Handle captured image
-  }}
-  onError={(error) => {
-    // Handle errors
-  }}
-/>
-```
 
 ### 2. 🗺️ GPS Tracking Utility
 
@@ -113,7 +88,7 @@ const hash = await hashFingerprint(fingerprint);
 
 ### 5. 🔐 Multi-Step Login Flow
 
-**Flow:** Login → OTP → Face Verification → Dashboard
+**Flow:** Login → OTP → Dashboard
 
 **Pages:**
 1. **Login Page** (`/`)

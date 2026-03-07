@@ -28,9 +28,11 @@ otp_collection = database["otp"]  # keep as-is, but be consistent everywhere
 files_collection = database["files"]
 access_logs_collection = database["access_logs"]
 work_from_home_requests_collection = database["work_from_home_requests"]
-face_embeddings_collection = database["face_embeddings"]
+# face_embeddings_collection removed — face recognition no longer used
+
 device_fingerprints_collection = database["device_fingerprints"]
-sessions_collection = database["sessions"]  # Track active sessions with face verification status
+sessions_collection = database["sessions"]  # Track active sessions (now only holds basic info)
+
 
 # NEW: RBAC Collections
 roles_collection = database["roles"]  # NEW: Store role definitions

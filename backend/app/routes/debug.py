@@ -37,7 +37,7 @@ async def validate_access(payload: FileAccessRequest, current_user: dict = Depen
 
     result = {
         "file_found": False,
-        "face_session": False,
+        # face_session removed (no longer relevant)
         "device_ok": None,
         "ai_risk": None,
         "wfh_active": False,
@@ -54,16 +54,7 @@ async def validate_access(payload: FileAccessRequest, current_user: dict = Depen
 
     result["file_found"] = file_doc is not None
 
-    # Face/session check
-    session = await sessions_collection.find_one({
-        "user_id": user_id,
-        "$or": [
-            {"face_verified": True},
-            {"face_bypassed": True},
-        ],
-        "expires_at": {"$gt": datetime.utcnow()},
-    })
-    result["face_session"] = session is not None
+    # face/session check removed - not used anymore
 
     # Device fingerprint
     if payload.device_fingerprint:
@@ -125,8 +116,7 @@ async def validate_access(payload: FileAccessRequest, current_user: dict = Depen
     allowed = True
     if not result["file_found"]:
         allowed = False
-    if not result["face_session"]:
-        allowed = False
+    # face check removed - allow based on other factors
     if result["device_ok"] is False:
         allowed = False
     if isinstance(result["ai_risk"], dict) and result["ai_risk"].get("should_block"):

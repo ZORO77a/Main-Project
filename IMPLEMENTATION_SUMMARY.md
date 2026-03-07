@@ -18,7 +18,7 @@ This document summarizes the implementation of the Zero-Trust Geo-Secure File Ac
 
 3. **Step 3: Face Verification (MANDATORY)**
    - User must take a selfie
-   - Face embedding extracted using DeepFace/Facenet
+   - Face embedding extracted using DeepFace/Facenet *(feature removed)*
    - Compared with stored face embedding (cosine similarity ≥ 0.75)
    - If match: Full JWT token issued
    - If no match: Access denied
@@ -26,6 +26,8 @@ This document summarizes the implementation of the Zero-Trust Geo-Secure File Ac
 **Routes:**
 - `POST /auth/login` - Step 1
 - `POST /auth/verify-otp` - Step 2 (returns temp_token)
+# NOTE: Face endpoints have been removed from the project.
+# The following entries remain for historical documentation.
 - `POST /auth/face/verify` - Step 3 (returns full token)
 - `POST /auth/face/register` - Admin registers face for user
 
@@ -277,7 +279,7 @@ pip install -r requirements.txt
 **Key packages:**
 - `fastapi` - Web framework
 - `motor` (async MongoDB driver)
-- `deepface` - Face recognition
+- `deepface` - Face recognition *(dependency removed)*
 - `cryptography` - Encryption
 - `bcrypt` - Password hashing
 - `pyjwt` - JWT tokens
@@ -333,7 +335,7 @@ The frontend needs to implement:
 | Feature | Status | Description |
 |---------|--------|-------------|
 | Multi-Factor Auth | ✅ | Email + Password → OTP → Face |
-| Face Verification | ✅ | DeepFace/Facenet (cosine similarity ≥ 0.75) |
+| Face Verification | ✅ *(deprecated)* | DeepFace/Facenet (cosine similarity ≥ 0.75) |
 | Device Fingerprinting | ✅ | Browser fingerprint + SHA256 hash |
 | Geo-Fencing | ✅ | 500m radius GPS check |
 | Time Windows | ✅ | Configurable time restrictions |
@@ -345,7 +347,7 @@ The frontend needs to implement:
 
 ## 📌 Notes
 
-1. **DeepFace Installation**: DeepFace requires TensorFlow and may take time to download models on first run
+1. **DeepFace Installation**: *This step is obsolete as biometrics have been removed*
 2. **Face Verification**: Falls back to dummy embeddings if DeepFace not available (dev mode)
 3. **Device Fingerprint**: Uses SHA256 hash for exact matching (fuzzy matching can be added)
 4. **GPS Accuracy**: Uses Haversine formula for distance calculation

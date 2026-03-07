@@ -1,10 +1,10 @@
 # GeoCrypt Backend
 
-A comprehensive geofencing-based access control system with biometric authentication, post-quantum cryptography, and AI-powered monitoring.
+A comprehensive geofencing-based access control system with OTP-based authentication, post-quantum cryptography, and AI-powered monitoring.
 
 ## Features
 
-- **Multi-factor Authentication**: OTP + Face Recognition
+- **Multi-factor Authentication**: OTP only (no biometrics)
 - **Role-based Access Control**: Admin and Employee roles
 - **Geofencing**: Location-based access control
 - **WiFi Verification**: Network-based security
@@ -41,7 +41,6 @@ The API will be available at `http://localhost:8000`
 ### Authentication
 - `POST /auth/login` - Login with email/password
 - `POST /auth/verify-otp` - Verify OTP
-- `POST /auth/verify-face` - Face recognition verification
 
 ### Admin
 - `GET /admin/dashboard` - Admin dashboard data
@@ -62,7 +61,6 @@ The API will be available at `http://localhost:8000`
 
 ## Security Features
 
-- **Face Recognition**: Uses face_recognition library for biometric auth
 - **Location Tracking**: GPS-based geofencing with configurable tolerance
 - **WiFi Verification**: SSID matching for network security
 - **Time Windows**: Configurable access time slots
@@ -87,7 +85,7 @@ The backend is built with:
 - **FastAPI**: Modern Python web framework
 - **MongoDB**: NoSQL database with Motor async driver
 - **Pydantic**: Data validation and serialization
-- **OpenCV & face_recognition**: Computer vision for face recognition
+- **OpenCV**: Used for auxiliary image handling (face components removed)
 - **Cryptography**: File encryption/decryption
 - **scikit-learn**: Machine learning for anomaly detection
 

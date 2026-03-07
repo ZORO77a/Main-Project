@@ -10,8 +10,8 @@ import AdminDashboard from './pages/admin/Dashboard';
 import Employees from './pages/admin/Employees';
 import AddEmployee from './pages/admin/AddEmployee';
 import EditEmployee from './pages/admin/EditEmployee';
-import FaceRegistration from './pages/admin/FaceRegistration';
 import AIMonitoring from './pages/admin/AIMonitoring';
+// face registration page removed
 import AdminFiles from './pages/admin/AdminFiles';
 import AdminAccessLogs from './pages/admin/AdminAccessLogs';
 import AdminSettings from './pages/admin/AdminSettings';
@@ -19,7 +19,7 @@ import EmployeeHome from './pages/employee/EmployeeHome';
 import FileAccess from './pages/employee/FileAccess';
 import WorkFromHomeRequest from './pages/employee/WorkFromHomeRequest';
 import FileEditor from './pages/employee/FileEditor';
-import FaceVerification from './pages/FaceVerification';
+// Face verification functionality removed
 
 // Components
 import Navbar from './components/Navbar';
@@ -83,7 +83,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Login />} />
             <Route path="/otp" element={<OtpVerify />} />
-            <Route path="/face-verify" element={<FaceVerification />} />
+            {/* face verification removed, proceed directly after OTP */}
 
             {/* Admin Routes */}
             <Route
@@ -176,26 +176,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/admin/face-registration"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminLayout>
-                    <FaceRegistration />
-                  </AdminLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/face-registration"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminLayout>
-                    <FaceRegistration />
-                  </AdminLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* face registration routes removed */}
 
             {/* Employee Routes */}
             <Route

@@ -41,7 +41,7 @@ A comprehensive security platform that implements **Google BeyondCorp + Microsof
   - Resend OTP functionality
 
 - **Step 3: Face Verification (Mandatory)**
-  - DeepFace/Facenet integration
+  - DeepFace/Facenet integration (removed - biometric features deprecated)
   - Face embedding extraction
   - Cosine similarity threshold (≥0.75)
   - Full JWT token on success
@@ -505,7 +505,7 @@ Framework: FastAPI 0.104.1
 Database: MongoDB (with Motor async driver)
 Authentication: JWT + Bcrypt
 Encryption: AES-256-GCM + X25519
-Face Recognition: DeepFace 0.0.79 + TensorFlow 2.15
+Face Recognition: (removed) DeepFace 0.0.79 + TensorFlow 2.15
 Machine Learning: scikit-learn, pandas, numpy
 Geolocation: geopy 2.4.1
 Email: SMTP (Twilio 8.2.2)
@@ -550,7 +550,7 @@ Package Manager: npm, pip
 ## 🚀 Key Accomplishments
 
 1. ✅ **Multi-Factor Authentication** - Complete 3-step authentication
-2. ✅ **Biometric Security** - DeepFace face recognition integration
+2. ✅ **Biometric Security** - DeepFace face recognition integration *(now removed)*
 3. ✅ **Geofencing** - Haversine-based location validation
 4. ✅ **Device Fingerprinting** - Browser+system fingerprint tracking
 5. ✅ **Military-Grade Encryption** - AES-256-GCM hybrid encryption
@@ -569,7 +569,7 @@ Package Manager: npm, pip
 - **Impact:** WiFi is soft rule (not blocking), fallback to other checks
 - **Workaround:** Works better on Android Chrome, enterprise managed browsers
 
-### 2. DeepFace Model Download
+### 2. DeepFace Model Download *(obsolete — face features removed)*
 - **Issue:** Large TensorFlow model downloads on first run
 - **Impact:** Initial startup may take 2-5 minutes
 - **Workaround:** Implement model caching, pre-download in production

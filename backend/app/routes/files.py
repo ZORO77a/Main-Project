@@ -73,50 +73,7 @@ async def access_file_for_viewing(
     if not file_doc:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # 1. CHECK FACE VERIFICATION STATUS
-    session = await sessions_collection.find_one({
-        "user_id": user_id,
-        "$or": [
-            {"face_verified": True},
-            {"face_bypassed": True}
-        ],
-        "expires_at": {"$gt": datetime.utcnow()},
-    })
-
-    if not session:
-        import os
-        ALLOW_FACE_BYPASS = os.getenv("ALLOW_ADMIN_FACE_BYPASS", "true").lower() == "true"
-
-        if ALLOW_FACE_BYPASS:
-            session_expires = datetime.utcnow() + timedelta(hours=24)
-            await sessions_collection.update_one(
-                {"user_id": user_id},
-                {
-                    "$set": {
-                        "user_id": user_id,
-                        "session_token": f"session_{ObjectId()}",
-                        "face_verified": False,
-                        "face_bypassed": True,
-                        "face_bypassed_at": datetime.utcnow(),
-                        "expires_at": session_expires,
-                        "created_at": datetime.utcnow(),
-                    }
-                },
-                upsert=True,
-            )
-        else:
-            await access_logs_collection.insert_one({
-                "user_id": user_id,
-                "file_id": payload.file_id,
-                "action": "file_access_view",
-                "timestamp": datetime.utcnow(),
-                "success": False,
-                "reason": "Face verification required",
-            })
-            raise HTTPException(
-                status_code=403,
-                detail="Face verification required"
-            )
+    # Face verification step removed; OTP-authenticated token is sufficient
 
     # 2. CHECK DEVICE FINGERPRINT
     if payload.device_fingerprint:
@@ -161,15 +118,7 @@ async def access_file_for_viewing(
                 detail=f"Access blocked due to high risk score ({risk_check['risk_score']})"
             )
 
-        if risk_check["should_reauth"]:
-            await sessions_collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"face_verified": False}},
-            )
-            raise HTTPException(
-                status_code=403,
-                detail="Face re-verification required"
-            )
+        # re-auth step removed - no further action required
 
     # 4. CHECK WFH STATUS
     wfh_active = await has_active_wfh(user_id)

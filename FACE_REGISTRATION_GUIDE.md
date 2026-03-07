@@ -1,3 +1,5 @@
+> **DEPRECATED**: Face registration is no longer part of the authentication flow. This guide remains for historical reference only.
+
 # Face Registration Guide
 
 ## How to Register Admin Face

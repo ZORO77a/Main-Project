@@ -1,3 +1,9 @@
+# Admin Face Verification Bypass (DEPRECATED)
+
+> **NOTE:** Face recognition has been removed from the project. This document
+> is kept for historical reference but the backend no longer supports face
+> verification or bypass logic. Only email/password + OTP remain.
+
 # Admin Face Verification Bypass (Development Mode)
 
 ## Overview

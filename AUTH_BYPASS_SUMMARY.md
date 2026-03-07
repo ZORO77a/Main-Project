@@ -1,6 +1,8 @@
 # Authentication Bypass Summary
 
 **Date:** March 5, 2026  
+> **DEPRECATED:** Face verification removed; OTP-only authentication is active.
+
 **Purpose:** Development mode - bypassing OTP and Face verification for both Employee and Admin login
 
 ## Changes Made

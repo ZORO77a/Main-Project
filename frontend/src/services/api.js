@@ -12,7 +12,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // 60 s — DeepFace model warm-up on first call can take 20-30 s
+  // (Deprecated) previously allowed long timeout for DeepFace model warm-up
   timeout: 60000,
 });
 
@@ -67,15 +67,7 @@ export const authAPI = {
   resendOTP: (data) =>
     api.post('/auth/resend-otp', data),
 
-  // Face Verification — 90 s timeout: DeepFace may need to download/load model weights
-  verifyFace: (data) =>
-    api.post('/auth/face/verify', data, { timeout: 90000 }),
-
-  registerFace: (data) =>
-    api.post('/auth/face/register', data, { timeout: 90000 }),
-
-  getFaceStatus: () =>
-    api.get('/auth/face/status'),
+  // face-related endpoints removed (biometrics disabled)
 
   // Device Fingerprint
   registerDevice: (data) =>

@@ -229,56 +229,10 @@ async def access_file(
     if not file_doc:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # 1. CHECK FACE VERIFICATION STATUS
-    session = await sessions_collection.find_one({
-        "user_id": user_id,
-        "$or": [
-            {"face_verified": True},
-            {"face_bypassed": True}  # Allow admin bypass in dev mode
-        ],
-        "expires_at": {"$gt": datetime.utcnow()},
-    })
+    # 1. FACE CHECK REMOVED – authentication now relies solely on OTP
 
-    if not session:
-        # Check if face bypass is allowed (dev mode)
-        import os
-        ALLOW_FACE_BYPASS = os.getenv("ALLOW_ADMIN_FACE_BYPASS", "true").lower() == "true"
-        
-        if ALLOW_FACE_BYPASS:
-            # Create bypass session on-the-fly for dev mode
-            print("[DEV MODE] File access - creating bypass session for user")
-            session_expires = datetime.utcnow() + timedelta(hours=24)
-            
-            await sessions_collection.update_one(
-                {"user_id": user_id},
-                {
-                    "$set": {
-                        "user_id": user_id,
-                        "session_token": f"session_{ObjectId()}",
-                        "face_verified": False,
-                        "face_bypassed": True,
-                        "face_bypassed_at": datetime.utcnow(),
-                        "expires_at": session_expires,
-                        "created_at": datetime.utcnow(),
-                    }
-                },
-                upsert=True,
-            )
-            # Session created, continue with file access
-        else:
-            print(f"DEBUG: Access denied. Face verification required. User: {user_id}, Role: {current_user.get('role')}, Allowed Bypass: {ALLOW_FACE_BYPASS}")
-            await access_logs_collection.insert_one({
-                "user_id": user_id,
-                "file_id": payload.file_id,
-                "action": "file_access",
-                "timestamp": datetime.utcnow(),
-                "success": False,
-                "reason": "Face verification required",
-            })
-            raise HTTPException(
-                status_code=403,
-                detail="Face verification required. Please verify your face first. If you're an employee, contact admin to register your face."
-            )
+    # (Previously we enforced face_verified/face_bypassed sessions and dev bypass logic.)
+    # With face recognition gone, anyone with a valid token may proceed.
 
     # 2. CHECK DEVICE FINGERPRINT (if provided)
     if payload.device_fingerprint:
@@ -326,18 +280,7 @@ async def access_file(
                 status_code=403,
                 detail=f"Access blocked due to high risk score ({risk_check['risk_score']}). Please contact admin."
             )
-        
-        if risk_check["should_reauth"]:
-            # Require face re-verification
-            print("DEBUG: Access denied. Risk re-auth required.")
-            await sessions_collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"face_verified": False}},
-            )
-            raise HTTPException(
-                status_code=403,
-                detail="Face re-verification required due to elevated risk. Please verify your face again."
-            )
+        # re-auth step removed; no face re-verification needed
     else:
         print(f"[DEV MODE] AI risk check bypassed (score: {risk_check['risk_score']})")
 

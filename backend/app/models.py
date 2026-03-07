@@ -134,16 +134,6 @@ class FileAccessRequest(BaseModel):
     device_fingerprint: Optional[str] = None
 
 
-# ------------------ FACE VERIFICATION MODELS ------------------
-
-class FaceVerificationRequest(BaseModel):
-    email: EmailStr
-    face_image: str  # Base64 encoded image
-
-
-class FaceRegisterRequest(BaseModel):
-    email: EmailStr
-    face_image: str  # Base64 encoded image
 
 
 # ------------------ DEVICE FINGERPRINT MODELS ------------------
