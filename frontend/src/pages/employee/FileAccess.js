@@ -15,7 +15,7 @@ import {
   Lock,
   Zap
 } from 'lucide-react';
-import { employeeAPI, authAPI } from '../../services/api';
+import { employeeAPI, authAPI, adminAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { getCurrentLocation } from '../../utils/gps';
@@ -260,15 +260,7 @@ export default function FileAccess() {
     setFileContent(null);
 
     try {
-      const response = await employeeAPI.accessFileForViewing(
-        {
-          file_id: file.id,
-          current_location: { lat: 0, lng: 0 },
-          current_wifi_ssid: manualWifiSSID || '',
-          device_fingerprint: deviceFingerprint || '',
-        },
-        { responseType: 'blob' }
-      );
+      const response = await adminAPI.viewFileContent(file.id, { responseType: 'blob' });
 
       const blob = response.data;
       const objectUrl = URL.createObjectURL(blob);
