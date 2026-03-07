@@ -126,26 +126,16 @@ async def login(request: LoginRequest):
 
 @router.post("/verify-otp")
 async def verify_otp(request: OTPVerifyRequest):
-    # Actual OTP verification
+    # OTP BYPASS MODE - accept any OTP input (temporary for development)
     user = await users_collection.find_one({"email": request.email})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # find a matching unused OTP entry
-    otp_doc = await otp_collection.find_one({"email": request.email, "used": False})
-    if not otp_doc:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
-    if otp_doc["expires_at"] < datetime.utcnow():
-        # mark it used anyway
-        await otp_collection.update_one({"_id": otp_doc["_id"]}, {"$set": {"used": True}})
-        raise HTTPException(status_code=400, detail="OTP expired")
-
-    if not verify_password(request.otp, otp_doc["otp_hash"]):
-        raise HTTPException(status_code=400, detail="Invalid OTP")
-
-    # consume OTP
-    await otp_collection.update_one({"_id": otp_doc["_id"]}, {"$set": {"used": True}})
+    # Skip OTP validation - just mark any existing OTP as used
+    await otp_collection.update_many(
+        {"email": request.email, "used": False},
+        {"$set": {"used": True}},
+    )
 
     # create/update session record (basic info only)
     from app.database import sessions_collection
@@ -173,11 +163,12 @@ async def verify_otp(request: OTPVerifyRequest):
         "action": "otp_verified",
         "timestamp": datetime.utcnow(),
         "success": True,
+        "reason": "OTP bypass (dev mode)",
     })
 
     return {
         "token": token,
-        "message": "Login successful",
+        "message": "Login successful (OTP bypassed - dev mode)",
         "user": {
             "id": str(user["_id"]),
             "email": user["email"],

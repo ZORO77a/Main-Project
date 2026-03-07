@@ -47,6 +47,10 @@ def get_mime_type(filename: str) -> str:
         'gif': 'image/gif',
         'bmp': 'image/bmp',
         'svg': 'image/svg+xml',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'doc': 'application/msword',
+        'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'ppt': 'application/vnd.ms-powerpoint',
     }
     return mime_map.get(ext, 'application/octet-stream')
 

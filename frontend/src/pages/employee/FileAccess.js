@@ -42,6 +42,7 @@ export default function FileAccess() {
   const [fileContent, setFileContent] = useState(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState(null);
+  const [officePreviewUrl, setOfficePreviewUrl] = useState(null);
 
   const { user } = useAuth();
 
@@ -254,32 +255,74 @@ export default function FileAccess() {
   /* ================= VIEW FILE CONTENT ================= */
   const viewFileContent = async (file) => {
     if (!file) return;
+
+    const fileExt = file.filename.toLowerCase().split('.').pop();
+    const isOfficeFile = ['docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls'].includes(fileExt);
+
     setViewingFile(file);
     setFileLoading(true);
     setFileError(null);
     setFileContent(null);
+    setOfficePreviewUrl(null);
 
     try {
       const response = await adminAPI.viewFileContent(file.id, { responseType: 'blob' });
-
       const blob = response.data;
-      const objectUrl = URL.createObjectURL(blob);
+      const fileType = getFileType(file.filename);
 
-      setFileContent({
-        url: objectUrl,
-        blob: blob,
-        type: getFileType(file.filename),
-        mimeType: response.headers['content-type'] || 'application/octet-stream',
-      });
-
-      toast.success('File access granted ✓', { duration: 2000 });
+      if (isOfficeFile) {
+        // For Office files, convert blob to base64 data URI
+        // This allows Microsoft Office viewer to access the file without CORS issues
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64Data = reader.result.split(',')[1]; // Extract base64 part
+          const mimeType = response.headers['content-type'] || getMimeType(file.filename);
+          const dataUri = `data:${mimeType};base64,${base64Data}`;
+          
+          // Pass data URI to Microsoft Office Web Viewer
+          const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(dataUri)}`;
+          setOfficePreviewUrl(officeViewerUrl);
+          setFileLoading(false);
+          toast.success('File access granted ✓', { duration: 2000 });
+        };
+        reader.onerror = () => {
+          setFileError("Failed to process file");
+          setFileLoading(false);
+          toast.error("Failed to process file");
+        };
+        reader.readAsDataURL(blob);
+      } else {
+        // For non-Office files, create blob URL normally
+        const objectUrl = URL.createObjectURL(blob);
+        setFileContent({
+          url: objectUrl,
+          blob: blob,
+          type: fileType,
+          mimeType: response.headers['content-type'] || 'application/octet-stream',
+        });
+        setFileLoading(false);
+        toast.success('File access granted ✓', { duration: 2000 });
+      }
     } catch (error) {
       const errorMsg = error.response?.data?.detail || "Failed to load file content";
       setFileError(errorMsg);
       toast.error(errorMsg);
-    } finally {
       setFileLoading(false);
     }
+  };
+
+  const getMimeType = (filename) => {
+    const ext = filename.toLowerCase().split('.').pop();
+    const mimeMap = {
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'doc': 'application/msword',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xls': 'application/vnd.ms-excel',
+      'pdf': 'application/pdf',
+    };
+    return mimeMap[ext] || 'application/octet-stream';
   };
 
   const closeFileViewer = () => {
@@ -295,10 +338,12 @@ export default function FileAccess() {
     const ext = filename.toLowerCase().split('.').pop();
     const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
     const textTypes = ['txt', 'json', 'log', 'md', 'csv', 'xml', 'yaml', 'yml', 'py', 'js', 'ts', 'html', 'css'];
+    const officeTypes = ['docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls'];
 
     if (ext === 'pdf') return 'pdf';
     if (imageTypes.includes(ext)) return 'image';
     if (textTypes.includes(ext)) return 'text';
+    if (officeTypes.includes(ext)) return 'office';
     return 'binary';
   };
 
@@ -649,6 +694,29 @@ export default function FileAccess() {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Office Web Viewer */}
+          {officePreviewUrl && !fileLoading && !fileError && (
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 flex flex-col z-10" style={{ height: '90vh' }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">{viewingFile.filename}</h3>
+                <button
+                  onClick={closeFileViewer}
+                  className="p-2 text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  src={officePreviewUrl}
+                  className="w-full h-full border-0"
+                  title={viewingFile.filename}
+                  allow="fullscreen"
+                />
               </div>
             </div>
           )}

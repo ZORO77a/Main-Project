@@ -92,10 +92,12 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
     const ext = filename.toLowerCase().split('.').pop();
     const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
     const textTypes = ['txt', 'json', 'log', 'md', 'csv', 'xml', 'yaml', 'yml', 'py', 'js', 'ts', 'html', 'css'];
+    const officeTypes = ['docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls'];
 
     if (ext === 'pdf') return 'pdf';
     if (imageTypes.includes(ext)) return 'image';
     if (textTypes.includes(ext)) return 'text';
+    if (officeTypes.includes(ext)) return 'office';
     return 'binary';
   };
 
@@ -103,6 +105,15 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
     if (mime.startsWith('application/pdf')) return 'pdf';
     if (mime.startsWith('image/')) return 'image';
     if (mime.startsWith('text/') || mime === 'application/json') return 'text';
+    // Office document MIME types
+    if (mime.includes('openxmlformats-officedocument') || 
+        mime.includes('word') || 
+        mime.includes('spreadsheet') || 
+        mime.includes('presentation') || 
+        mime.includes('msword') || 
+        mime.includes('ms-powerpoint') ||
+        mime.includes('ms-excel')) return 'office';
+    // Fallback to file extension detection
     return getFileType(filename);
   };
 
@@ -146,16 +157,22 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
       });
 
       const blob = response.data;
-      const responseMime = response.headers['content-type'] || 'application/octet-stream';
+      let responseMime = response.headers['content-type'] || 'application/octet-stream';
+      // Strip charset and other parameters from MIME type
+      responseMime = responseMime.split(';')[0].trim();
       
       const detectedType = getFileTypeFromMime(responseMime, fileName);
+      
+      console.log('FileViewer Debug:', {
+        fileName,
+        responseMime,
+        detectedType,
+        isDocx: fileName.toLowerCase().endsWith('.docx'),
+        isPptx: fileName.toLowerCase().endsWith('.pptx'),
+      });
 
       // Store blob ref for text file access
       blobRef.current = blob;
-
-      // For text files and binary files, create blob URL
-      const objectUrl = URL.createObjectURL(blob);
-      objectUrlRef.current = objectUrl;
 
       // For text files, extract text content
       if (detectedType === 'text') {
@@ -169,7 +186,28 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
         }
       }
 
-      setFileContent(objectUrl);
+      // For Office files (DOCX, PPTX), trigger download to open with system app
+      if (detectedType === 'office' && (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.pptx'))) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        
+        toast.success('File downloaded. Opening with your system application...');
+        setTimeout(() => onClose(), 1500);
+        return;
+      }
+
+      // For non-text files, create blob URL
+      if (detectedType !== 'text') {
+        const objectUrl = URL.createObjectURL(blob);
+        objectUrlRef.current = objectUrl;
+        setFileContent(objectUrl);
+      }
+
       setFileType(detectedType);
       setMimeType(responseMime);
       setAccessGranted(true);
@@ -253,6 +291,33 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
           </div>
         );
 
+      case 'office':
+        // Office documents are auto-downloaded and opened with system app
+        return (
+          <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+            <div className="text-center space-y-4">
+              <div className="text-5xl">📄</div>
+              <h3 className="text-lg font-semibold text-gray-800">{fileName}</h3>
+              <p className="text-gray-600 text-sm max-w-sm">
+                This file is being downloaded and will open with your default application for this file type.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'binary':
+        return (
+          <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+            <div className="text-center space-y-4">
+              <div className="text-5xl">📦</div>
+              <h3 className="text-lg font-semibold text-gray-800">Binary File</h3>
+              <p className="text-gray-600 text-sm max-w-sm">
+                {fileName} is a binary file that cannot be previewed in the browser.
+              </p>
+            </div>
+          </div>
+        );
+
       case 'text':
         return (
           <div className="h-full flex flex-col">
@@ -305,10 +370,11 @@ const FileViewer = ({ fileId, fileName, algorithm, wifiSSID = null, onClose }) =
         return (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-3">
             <Eye className="w-16 h-16 text-gray-300" />
-            <p className="text-lg font-medium">Binary file — preview not available</p>
+            <p className="text-lg font-medium">Preview not available</p>
             <p className="text-sm text-center text-gray-400">
+              File type: <code className="text-gray-600">{fileType || 'unknown'}</code><br />
               This file type cannot be previewed in the browser.<br />
-              Only text, image, or PDF files support in-browser viewing.
+              Supported formats: text, image, PDF, Office documents (DOCX, PPTX)
             </p>
           </div>
         );
