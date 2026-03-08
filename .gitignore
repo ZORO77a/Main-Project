@@ -1,22 +1,4 @@
-# Python
+node_modules/
+.env
 __pycache__/
 *.pyc
-
-# Virtual environment
-venv/
-backend/venv/
-
-# environment variables
-.env
-
-# VSCode
-.vscode/
-
-# logs
-*.log
-
-# MongoDB installers
-*.msi
-mongodb-*.zip
-mongodb-*/
-mongosh-*/
