@@ -13,9 +13,11 @@ async def create_initial_admin():
         print("Admin user already exists")
         return
 
-    admin_email = os.getenv("INITIAL_ADMIN_EMAIL")
-    admin_password = os.getenv("INITIAL_ADMIN_PASSWORD")
+    # allow overriding via environment variables, but fall back to fixed defaults
+    admin_email = os.getenv("INITIAL_ADMIN_EMAIL", "ananthakrishnan272004@gmail.com")
+    admin_password = os.getenv("INITIAL_ADMIN_PASSWORD", "admin")
 
+    # if the defaults are still unset (which won't happen) raise an error
     if not admin_email or not admin_password:
         raise RuntimeError(
             "Environment variables INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD must be set"

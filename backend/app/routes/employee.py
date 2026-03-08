@@ -229,10 +229,7 @@ async def access_file(
     if not file_doc:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # 1. FACE CHECK REMOVED – authentication now relies solely on OTP
-
-    # (Previously we enforced face_verified/face_bypassed sessions and dev bypass logic.)
-    # With face recognition gone, anyone with a valid token may proceed.
+    # authentication now relies solely on OTP and other policies; face checks were removed.
 
     # 2. CHECK DEVICE FINGERPRINT (if provided)
     if payload.device_fingerprint:

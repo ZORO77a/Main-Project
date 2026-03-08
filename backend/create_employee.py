@@ -7,8 +7,9 @@ from app.utils import hash_password
 
 
 async def create_employee():
-    employee_email = os.getenv("EMPLOYEE_EMAIL")
-    employee_password = os.getenv("EMPLOYEE_PASSWORD")
+    # allow overriding via environment variables, but fall back to requested defaults
+    employee_email = os.getenv("EMPLOYEE_EMAIL", "pta22cc016@cek.ac.in")
+    employee_password = os.getenv("EMPLOYEE_PASSWORD", "ananthan")
 
     if not employee_email or not employee_password:
         raise RuntimeError(

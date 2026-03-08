@@ -2,11 +2,11 @@ fastapi==0.104.1
 uvicorn==0.24.0
 pymongo==4.6.0
 python-dotenv==1.0.0
-pydantic[email]==2.5.0
+pydantic[email]>=2.6.0
 bcrypt==4.1.2
 pyjwt==2.8.0
 python-multipart==0.0.6
-cryptography==41.0.7
+cryptography>=41.0.7
 geopy==2.4.1
 scikit-learn==1.6.0
 pandas>=2.1.0
@@ -14,7 +14,7 @@ numpy>=1.26.0
 twilio==8.2.2
 python-socketio==5.10.0
 aiofiles==23.2.1
-pillow==10.1.0
+# pillow==10.1.0  # disabled: build requires system libs; install manually if needed
 # face recognition dependencies removed (deepface / tensorflow were previously used)
 openai==1.3.0
 kyber-py>=1.2.0

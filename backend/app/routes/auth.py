@@ -21,6 +21,8 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 security = HTTPBearer()
 
 OTP_EXPIRY_SECONDS = int(os.getenv("OTP_EXPIRY_SECONDS", "300"))
+# Set OTP_BYPASS=true to skip the OTP step entirely (dev mode or temporary override).
+# Revoke by unsetting or setting to false when you want full 2FA back.
 
 # ======================================================
 # OTP EMAIL
@@ -77,7 +79,7 @@ async def get_current_user(
 
 @router.post("/login")
 async def login(request: LoginRequest):
-    # Standard credentials check followed by OTP generation
+    # Standard credentials check followed by OTP generation (unless bypassed)
     user = await users_collection.find_one({"email": request.email})
 
     if not user or not verify_password(request.password, user["password_hash"]):
@@ -89,6 +91,32 @@ async def login(request: LoginRequest):
             "reason": "Invalid credentials",
         })
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # OTP bypass flag (set via env var). useful for development or temporary lockouts.
+    otp_bypass = os.getenv("OTP_BYPASS", "false").lower() == "true"
+    if otp_bypass:
+        # directly issue token without sending OTP
+        token = create_jwt_token({
+            "user_id": str(user["_id"]),
+            "otp_verified": True,
+        })
+        await access_logs_collection.insert_one({
+            "user_id": str(user["_id"]),
+            "action": "login",
+            "timestamp": datetime.utcnow(),
+            "success": True,
+            "reason": "OTP bypass (dev mode)",
+        })
+        return {
+            "token": token,
+            "message": "Login successful (OTP bypassed)",
+            "user": {
+                "id": str(user["_id"]),
+                "email": user["email"],
+                "name": user.get("name", ""),
+                "role": user["role"],
+            },
+        }
 
     # invalidate any outstanding OTPs for this email
     await otp_collection.update_many(

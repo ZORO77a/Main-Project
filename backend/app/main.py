@@ -5,7 +5,6 @@ from app.routes.auth import router as auth_router
 from app.routes.admin import router as admin_router
 from app.routes.employee import router as employee_router
 from app.routes.ai_monitoring import router as ai_router
-# face_verification route removed - no longer used
 from app.routes.device_fingerprint import router as device_router
 from app.routes.debug import router as debug_router
 from app.routes.files import router as files_router
@@ -31,7 +30,6 @@ app.add_middleware(
 
 # 🚦 ROUTES
 app.include_router(auth_router)                 # /auth/*
-# face router removed (face recognition disabled)
 app.include_router(device_router)               # /auth/device/*
 app.include_router(debug_router)                # /debug/* (dev-only)
 app.include_router(admin_router)                # /admin/*
