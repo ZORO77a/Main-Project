@@ -175,7 +175,7 @@ export const employeeAPI = {
     api.post('/employee/access-file', data, config),
 
   accessFileForViewing: (data, config) =>
-    api.post('/api/files/access', data, config),
+    api.post('/employee/access-file', data, config),
 
   requestWFH: (data) =>
     api.post('/employee/request-work-from-home', data),

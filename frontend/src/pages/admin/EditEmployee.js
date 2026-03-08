@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { User, ArrowLeft, MapPin, Wifi, Clock, Save } from 'lucide-react';
+import { User, ArrowLeft, Save, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI } from '../../services/api';
 
@@ -8,31 +8,23 @@ export default function EditEmployee() {
   const { employeeId } = useParams();
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     phone: '',
-    allocated_location: { lat: '', lng: '' },
-    allocated_wifi_ssid: '',
-    allocated_time_start: '',
-    allocated_time_end: ''
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchEmployee();
-  }, [employeeId]);
-
-  const fetchEmployee = async () => {
+  const fetchEmployee = useCallback(async () => {
     try {
       const response = await adminAPI.getEmployee(employeeId);
       const employee = response.data;
       setFormData({
         name: employee.name,
+        email: employee.email || '',
         phone: employee.phone,
-        allocated_location: employee.allocated_location || { lat: '', lng: '' },
-        allocated_wifi_ssid: employee.allocated_wifi_ssid || '',
-        allocated_time_start: employee.allocated_time_start || '',
-        allocated_time_end: employee.allocated_time_end || ''
+        password: ''
       });
     } catch (error) {
       toast.error('Failed to load employee data');
@@ -40,75 +32,67 @@ export default function EditEmployee() {
     } finally {
       setFetchLoading(false);
     }
-  };
+  }, [employeeId, navigate]);
+
+  useEffect(() => {
+    fetchEmployee();
+  }, [fetchEmployee]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    // Build payload WITHOUT employee_id
-    const submitData = {
-      ...formData,
-      allocated_location:
-        formData.allocated_location.lat &&
-        formData.allocated_location.lng
-          ? {
-              lat: parseFloat(formData.allocated_location.lat),
-              lng: parseFloat(formData.allocated_location.lng),
-            }
-          : undefined,
-    };
+    try {
+      // Build payload
+      const submitData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone
+      };
 
-    // Remove empty / undefined fields
-    Object.keys(submitData).forEach((key) => {
-      if (
-        submitData[key] === undefined ||
-        submitData[key] === ''
-      ) {
-        delete submitData[key];
+      // Only include password if provided
+      if (formData.password.trim()) {
+        submitData.password = formData.password;
       }
-    });
 
-    // ✅ CORRECT API CALL
-    await adminAPI.editEmployee(employeeId, submitData);
+      console.log('Submitting update:', submitData);
+      await adminAPI.editEmployee(employeeId, submitData);
 
-    toast.success('Employee updated successfully!');
-    navigate('/admin/employees');
-  } catch (error) {
-    const detail = error.response?.data?.detail;
+      toast.success('Employee updated successfully!');
+      navigate('/admin/employees');
+    } catch (error) {
+      let message = 'Failed to update employee';
+      
+      const detail = error.response?.data?.detail;
+      
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        message = detail
+          .map((d) => {
+            if (typeof d === 'string') return d;
+            if (d?.msg) return d.msg;
+            return JSON.stringify(d);
+          })
+          .join(', ');
+      } else if (detail && typeof detail === 'object') {
+        // Handle Pydantic validation error objects
+        message = detail.msg || detail.message || 'Failed to update employee';
+      }
 
-    const message =
-      typeof detail === 'string'
-        ? detail
-        : Array.isArray(detail)
-        ? detail.map((d) => d.msg).join(', ')
-        : 'Failed to update employee';
-
-    toast.error(message);
-  } finally {
-    setLoading(false);
-  }
-};
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   if (fetchLoading) {
@@ -132,7 +116,7 @@ export default function EditEmployee() {
           </button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Edit Employee</h1>
-            <p className="text-gray-600 mt-1">Update employee information and access restrictions</p>
+            <p className="text-gray-600 mt-1">Update employee basic information</p>
           </div>
         </div>
       </div>
@@ -163,6 +147,20 @@ export default function EditEmployee() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number
                 </label>
                 <input
@@ -178,99 +176,37 @@ export default function EditEmployee() {
             </div>
           </div>
 
-          {/* Location Restrictions */}
+          {/* Password Change */}
           <div>
             <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-green-600" />
-              Location Restrictions
+              <Lock className="w-5 h-5 mr-2 text-orange-600" />
+              Change Password
             </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Leave blank if you don't want to change the password
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Latitude
+                  New Password
                 </label>
                 <input
-                  type="number"
-                  step="any"
-                  name="allocated_location.lat"
-                  value={formData.allocated_location.lat}
+                  type="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-                  placeholder="e.g., 12.9716"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Longitude
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  name="allocated_location.lng"
-                  value={formData.allocated_location.lng}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-                  placeholder="e.g., 77.5946"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                  placeholder="Enter new password (optional)"
                 />
               </div>
             </div>
           </div>
 
-          {/* Network Restrictions */}
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-              <Wifi className="w-5 h-5 mr-2 text-purple-600" />
-              Network Restrictions
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  WiFi SSID
-                </label>
-                <input
-                  type="text"
-                  name="allocated_wifi_ssid"
-                  value={formData.allocated_wifi_ssid}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                  placeholder="Enter WiFi network name"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Time Restrictions */}
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-orange-600" />
-              Time Restrictions
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Time (HH:MM)
-                </label>
-                <input
-                  type="time"
-                  name="allocated_time_start"
-                  value={formData.allocated_time_start}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Time (HH:MM)
-                </label>
-                <input
-                  type="time"
-                  name="allocated_time_end"
-                  value={formData.allocated_time_end}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
-                />
-              </div>
-            </div>
+          {/* Info Note */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> To manage location, network, and time restrictions for this employee, use the Employee Restrictions tab.
+            </p>
           </div>
 
           {/* Submit Button */}

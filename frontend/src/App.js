@@ -10,6 +10,8 @@ import AdminDashboard from './pages/admin/Dashboard';
 import Employees from './pages/admin/Employees';
 import AddEmployee from './pages/admin/AddEmployee';
 import EditEmployee from './pages/admin/EditEmployee';
+import EmployeeRestrictions from './pages/admin/EmployeeRestrictions';
+import BatchEmployeeRestrictions from './pages/admin/BatchEmployeeRestrictions';
 import AIMonitoring from './pages/admin/AIMonitoring';
 // face registration page removed
 import AdminFiles from './pages/admin/AdminFiles';
@@ -132,6 +134,26 @@ function App() {
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminLayout>
                     <EditEmployee />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employee-restrictions/:employeeId"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <EmployeeRestrictions />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/batch-restrictions"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <BatchEmployeeRestrictions />
                   </AdminLayout>
                 </ProtectedRoute>
               }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Upload,
   FileText,
@@ -15,13 +15,12 @@ import {
   Lock,
   Zap
 } from 'lucide-react';
-import { employeeAPI, authAPI, adminAPI } from '../../services/api';
+import { employeeAPI, authAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { getCurrentLocation } from '../../utils/gps';
 import { getWiFiSSID } from '../../utils/wifi';
 import { generateDeviceFingerprint } from '../../utils/deviceFingerprint';
-import FileViewer from '../../components/FileViewer';
 
 export default function FileAccess() {
   const [files, setFiles] = useState([]);
@@ -36,8 +35,6 @@ export default function FileAccess() {
   const [wifiStatus, setWifiStatus] = useState(null);
   const [manualWifiSSID, setManualWifiSSID] = useState('');
   const [viewerFile, setViewerFile] = useState(null);
-
-  // New state for full-screen file viewer
   const [viewingFile, setViewingFile] = useState(null);
   const [fileContent, setFileContent] = useState(null);
   const [fileLoading, setFileLoading] = useState(false);
@@ -46,13 +43,8 @@ export default function FileAccess() {
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    fetchFiles();
-    initializeSecurityChecks();
-  }, []);
-
   // Initialize security checks (GPS, WiFi, Device)
-  const initializeSecurityChecks = async () => {
+  const initializeSecurityChecks = useCallback(async () => {
     try {
       // Generate device fingerprint
       const fingerprint = await generateDeviceFingerprint();
@@ -80,9 +72,9 @@ export default function FileAccess() {
     } catch (error) {
       console.error('Security initialization error:', error);
     }
-  };
+  }, []);
 
-  const detectWiFi = async () => {
+  const detectWiFi = useCallback(async () => {
     try {
       setWifiStatus({ checking: true });
       const response = await authAPI.getWiFiSSID();
@@ -108,9 +100,9 @@ export default function FileAccess() {
     } finally {
       setWifiStatus(prev => ({ ...prev, checking: false }));
     }
-  };
+  }, []);
 
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     try {
       const response = await employeeAPI.getDashboard();
       setFiles(response.data.files || []);
@@ -119,7 +111,12 @@ export default function FileAccess() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchFiles();
+    initializeSecurityChecks();
+  }, [fetchFiles, initializeSecurityChecks]);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -134,92 +131,6 @@ export default function FileAccess() {
       toast.error('Failed to upload file');
     } finally {
       setUploadLoading(false);
-    }
-  };
-
-  const handleFileAccess = async (fileId) => {
-    setAccessLoading(fileId);
-
-    try {
-      // Step 1: Get current location
-      try {
-        await getCurrentLocation();
-        toast.success('Location verified', { duration: 2000 });
-      } catch (error) {
-        toast.error(`Location error: ${error.message}`, { duration: 5000 });
-        throw new Error(`Location access failed: ${error.message}`);
-      }
-
-      // Step 2: Get WiFi SSID (use manual input or detected)
-      let wifiSSID = manualWifiSSID.trim();
-
-      if (!wifiSSID) {
-        // Try one last detection if empty
-        try {
-          const res = await authAPI.getWiFiSSID();
-          if (res.data.ssid) {
-            wifiSSID = res.data.ssid;
-            setManualWifiSSID(wifiSSID);
-          }
-        } catch (e) { /* ignore */ }
-      }
-
-      if (!wifiSSID) {
-        toast.error('Please enter your WiFi SSID before accessing the file', { duration: 5000 });
-        throw new Error('WiFi SSID is required');
-      }
-
-      // Step 3: Get device fingerprint
-      let fingerprint = deviceFingerprint;
-      if (!fingerprint) {
-        fingerprint = await generateDeviceFingerprint();
-        setDeviceFingerprint(fingerprint);
-      }
-
-      // Step 4: Verify device fingerprint
-      try {
-        await authAPI.verifyDevice(fingerprint);
-      } catch (error) {
-        toast.error('Device not recognized. Please register your device.', { duration: 5000 });
-        // Try to register device
-        try {
-          await authAPI.registerDevice(fingerprint);
-          toast.success('Device registered successfully');
-        } catch (regError) {
-          throw new Error('Device verification failed. Please contact admin.');
-        }
-      }
-
-      // Step 6: Prepare access request with all security data
-      // Note: FileViewer component will handle the actual API call with security checks
-      const file = files.find(f => f.id === fileId);
-      setViewerFile({
-        id: fileId,
-        name: file ? file.filename : 'Unknown File',
-        algorithm: file ? file.encryption_alg : null,
-      });
-
-      toast.success('Opening secure file viewer...');
-    } catch (error) {
-      console.error('File access error:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to access file';
-
-      // Show detailed error message
-      if (errorMessage.includes('Face verification')) {
-        toast.error('Face verification required. Please verify your face first.', { duration: 5000 });
-      } else if (errorMessage.includes('Location')) {
-        toast.error(errorMessage, { duration: 5000 });
-      } else if (errorMessage.includes('Time')) {
-        toast.error(errorMessage, { duration: 5000 });
-      } else if (errorMessage.includes('WiFi')) {
-        toast.error(errorMessage, { duration: 5000 });
-      } else if (errorMessage.includes('risk')) {
-        toast.error(errorMessage, { duration: 5000 });
-      } else {
-        toast.error(errorMessage, { duration: 5000 });
-      }
-    } finally {
-      setAccessLoading(null);
     }
   };
 
@@ -266,7 +177,58 @@ export default function FileAccess() {
     setOfficePreviewUrl(null);
 
     try {
-      const response = await adminAPI.viewFileContent(file.id, { responseType: 'blob' });
+      // Get current location
+      let location = null;
+      try {
+        location = await getCurrentLocation();
+      } catch (error) {
+        throw new Error(`Location access failed: ${error.message}`);
+      }
+
+      // Get WiFi SSID
+      let wifiSSID = manualWifiSSID.trim();
+      if (!wifiSSID) {
+        try {
+          const res = await authAPI.getWiFiSSID();
+          if (res.data.ssid) {
+            wifiSSID = res.data.ssid;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (!wifiSSID) {
+        throw new Error('WiFi SSID is required for file access');
+      }
+
+      // Get device fingerprint
+      let fingerprint = deviceFingerprint;
+      if (!fingerprint) {
+        fingerprint = await generateDeviceFingerprint();
+        setDeviceFingerprint(fingerprint);
+      }
+
+      // Verify device
+      try {
+        await authAPI.verifyDevice(fingerprint);
+      } catch (error) {
+        throw new Error('Device verification failed. Please contact admin.');
+      }
+
+      // Prepare access request with security data
+      const accessData = {
+        file_id: file.id,
+        current_location: {
+          lat: location.lat,
+          lng: location.lng
+        },
+        current_wifi_ssid: wifiSSID,
+        device_fingerprint: fingerprint,
+      };
+
+      // Use employee API for secure file access with all security checks
+      const response = await employeeAPI.accessFile(accessData, { responseType: 'blob' });
       const blob = response.data;
       const fileType = getFileType(file.filename);
 
@@ -304,9 +266,24 @@ export default function FileAccess() {
         toast.success('File access granted ✓', { duration: 2000 });
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || "Failed to load file content";
+      const errorMsg = error.response?.data?.detail || error.message || "Failed to load file content";
       setFileError(errorMsg);
-      toast.error(errorMsg);
+      
+      // Show detailed error message for security failures
+      if (errorMsg.includes('Location')) {
+        toast.error(`Location check failed: ${errorMsg}`, { duration: 5000 });
+      } else if (errorMsg.includes('WiFi') || errorMsg.includes('SSID')) {
+        toast.error(`Network check failed: ${errorMsg}`, { duration: 5000 });
+      } else if (errorMsg.includes('Time') || errorMsg.includes('window')) {
+        toast.error(`Time restriction failed: ${errorMsg}`, { duration: 5000 });
+      } else if (errorMsg.includes('Device')) {
+        toast.error(`Device verification failed: ${errorMsg}`, { duration: 5000 });
+      } else if (errorMsg.includes('risk')) {
+        toast.error(`Security risk detected: ${errorMsg}`, { duration: 5000 });
+      } else {
+        toast.error(errorMsg, { duration: 5000 });
+      }
+      
       setFileLoading(false);
     }
   };

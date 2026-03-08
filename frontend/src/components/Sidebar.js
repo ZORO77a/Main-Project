@@ -7,13 +7,15 @@ import {
   FileText,
   Activity,
   Settings,
-  Shield
+  Shield,
+  Lock
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Employees', href: '/admin/employees', icon: Users },
   { name: 'Add Employee', href: '/admin/add-employee', icon: UserPlus },
+  { name: 'Batch Restrictions', href: '/admin/batch-restrictions', icon: Lock },
   { name: 'Files', href: '/admin/files', icon: FileText },
   { name: 'Access Logs', href: '/admin/logs', icon: Activity },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

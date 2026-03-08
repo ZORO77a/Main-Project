@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union, Any
 from datetime import datetime, date
 from enum import Enum
 
@@ -129,7 +129,7 @@ class WorkFromHomeRequestCreate(BaseModel):
 
 class FileAccessRequest(BaseModel):
     file_id: str
-    current_location: Dict[str, float]
+    current_location: Any
     current_wifi_ssid: Optional[str] = None
     device_fingerprint: Optional[str] = None
 

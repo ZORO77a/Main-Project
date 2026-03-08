@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users,
   UserPlus,
   Edit,
   Trash2,
   ArrowLeft,
   Search,
   CheckCircle,
-  XCircle
+  XCircle,
+  Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI } from '../../services/api';
@@ -39,8 +39,6 @@ export default function Employees() {
       navigate('/');
       return;
     }
-    // Only fetch employees if authenticated and is admin
-    fetchEmployees();
   }, [token, isAdmin, navigate]);
 
   /* =========================
@@ -83,6 +81,13 @@ export default function Employees() {
       setLoading(false);
     }
   }, [token]);
+
+  // Fetch employees on mount and when authenticated
+  useEffect(() => {
+    if (token && isAdmin) {
+      fetchEmployees();
+    }
+  }, [token, isAdmin, fetchEmployees]);
 
   /* Refresh when user returns from Add/Edit page */
   useEffect(() => {
@@ -241,12 +246,21 @@ export default function Employees() {
                     <button
                       onClick={() => navigate(`/admin/edit-employee/${emp.id}`)}
                       className="text-blue-600 mr-3"
+                      title="Edit employee info"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
+                      onClick={() => navigate(`/admin/employee-restrictions/${emp.id}`)}
+                      className="text-purple-600 mr-3"
+                      title="Manage restrictions"
+                    >
+                      <Lock className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDeleteEmployee(emp.id)}
                       className="text-red-600"
+                      title="Deactivate employee"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
